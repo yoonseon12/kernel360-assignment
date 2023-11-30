@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Title</title>
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <script>
+            $(document).ready(function () {
+                getSubjects();
+                getStudents();
+            });
+
+            function getSubjects() {
+                $.ajax({
+                    url: '/api/v1/subjects',
+                    method: 'GET',
+                    dataType: 'json',
+                    contentType: 'application/json',
+                    success: function (data) {
+                        var subjectSelect = $('.subject');
+                        $.each(data.subjects, function (index, subject) {
+                            subjectSelect.append('<option value="' + subject.id + '">' + subject.name + '</option>');
+                        });
+                    },
+                    error: function (xhr, status, error) {
+                        console.log("에러 발생 error: ", error);
+                        console.log("에러 발생 xhr: ", xhr);
+                        console.log("에러 발생 status: ", status);
+                    }
+                });
+            }
+
+            function getStudents() {
+                $.ajax({
+                    url: '/api/v1/students',
+                    method: 'GET',
+                    dataType: 'json',
+                    contentType: 'application/json',
+                    success: function (data) {
+                        var studentSelect = $('.student');
+                        $.each(data.students, function (index, student) {
+                            studentSelect.append('<option value="' + student.id + '">' + student.name + '</option>');
+                        });
+
+                        getSubjectsByStudent();
+                    },
+                });
+            }
+
+            function getSubjectsByStudent() {
+                if (null == $('#score-student').val()) return;
+
+                $.ajax({
+                    url: '/api/v1/students/'+$('#score-student').val()+'/subjects',
+                    method: 'GET',
+                    dataType: 'json',
+                    contentType: 'application/json',
+                    success: function (data) {
+                        var studentSelect = $('.subjectByStudent');
+                        studentSelect.empty();
+                        $.each(data.subjects, function (index, subject) {
+                            studentSelect.append('<option value="' + subject.subjectId + '">' + subject.subjectName + '</option>');
+                        });
+                    },
+                });
+            }
+            function onclick_saveSubjectButton() {
+                var json = {
+                    name: $('#subjectName').val()
+                }
+                $.ajax({
+                    url: '/api/v1/subjects',
+                    method: 'POST',
+                    dataType: 'json',
+                    contentType: 'application/json',
+                    data: JSON.stringify(json),
+                    success: function (data) {
+                        location.reload();
+                    },
+                    error: function (data) {
+                        alert(data.responseJSON.message);
+                    }
+                });
+            }
+
+            function onclick_saveStudentButton() {
+                var json = {
+                    name: $('#studentName').val(),
+                    subjectId: $('#requiredSubject').val()
+                }
+                $.ajax({
+                    url: '/api/v1/students',
+                    method: 'POST',
+                    dataType: 'json',
+                    contentType: 'application/json',
+                    data: JSON.stringify(json),
+                    success: function (data) {
+                        location.reload();
+                    },
+                    error: function (data) {
+                        alert(data.responseJSON.message);
+                    }
+                });
+            }
+
+            function onclick_saveEnrolmentButton() {
+                var json = {
+                    studentId: $('#enrolment-student').val(),
+                    subjectId: $('#enrolment-subject').val(),
+                    lectureType: $('#lectureType').val()
+                }
+                $.ajax({
+                    url: '/api/v1/students/'+json.studentId+'/subjects',
+                    method: 'POST',
+                    dataType: 'json',
+                    contentType: 'application/json',
+                    data: JSON.stringify(json),
+                    success: function (data) {
+                        location.reload();
+                    },
+                    error: function (data) {
+                        alert(data.responseJSON.message);
+                    }
+                });
+            }
+
+            function onclick_saveScoreButton() {
+                var json = {
+                    studentId: $('#score-student').val(),
+                    subjectId: $('#score-subject').val(),
+                    point: $('#point').val()
+                }
+                $.ajax({
+                    url: '/api/v1/students/'+json.studentId+'/subjects/'+json.subjectId+'/scores',
+                    method: 'POST',
+                    dataType: 'json',
+                    contentType: 'application/json',
+                    data: JSON.stringify(json),
+                    success: function (data) {
+                        location.reload();
+                    },
+                    error: function (data) {
+                        alert(data.responseJSON.message);
+                    }
+                });
+            }
+
+            function onclick_findGradeButton() {
+                var subjectId = $('#grade-subject').val();
+                $.ajax({
+                    url: '/api/v1/grades/'+subjectId,
+                    method: 'GET',
+                    dataType: 'json',
+                    contentType: 'application/json',
+                    success: function (data) {
+                        var tbody = $('table tbody');
+                        tbody.empty();
+                        $.each(data.grades, function (index, item) {
+                            var tr = $('<tr>');
+                            tr.append('<td>' + item.name + '</td>');
+                            tr.append('<td>' + item.studentId + '</td>');
+                            tr.append('<td>' + item.requiredSubject + '</td>');
+                            tr.append('<td>' + item.subject + '</td>');
+                            tr.append('<td>' + item.point + '</td>');
+                            tr.append('<td>' + item.grade + '</td>');
+                            tbody.append(tr);
+                        });
+                    },
+                    error: function (data) {
+                        alert(data.responseJSON.message);
+                    }
+                });
+            }
+        </script>
+    </head>
+    <body>
+        <div>
+            <h3>과목등록</h3>
+            <div>
+                <label for="subjectName">과목명</label>
+                <input id="subjectName" type="text" name="subjectName">
+                <button id="saveSubjectButton" onclick="onclick_saveSubjectButton()">등록</button>
+                <div>(동일한 과목명 있는경우 등록 불가)</div>
+            </div>
+        </div>
+        <div>
+            <h3>학생등록</h3>
+            <div>
+                <label for="studentName">이름</label>
+                <input id="studentName" type="text" name="studentName">
+                <label for="requiredSubject">필수과목</label>
+                <select id="requiredSubject" class="subject"></select>
+                <button onclick="onclick_saveStudentButton()">등록</button>
+                <div>(동일한 학생명 있는 경우 등록 불가)</div>
+            </div>
+
+        </div>
+        <div>
+            <h3>수강신청</h3>
+            <div>
+                <label for="enrolment-student">학생</label>
+                <select id="enrolment-student" class="student" name="studentId"></select>
+                <label for="enrolment-subject">수강신청할과목</label>
+                <select id="enrolment-subject" class="subject" name="subjectId"></select>
+                <label for="lectureType">채점방식</label>
+                <select id="lectureType" class="lectureType" name="lectureType">
+                    <option value="SCORE">점수</option>
+                    <option value="PASS_FAIL">합격/불합격</option>
+                </select>
+                <button onclick="onclick_saveEnrolmentButton()">등록</button>
+                <div>(필수과목을 포함한 수강신청한 과목 등록 불가)</div>
+            </div>
+        </div>
+        <div>
+            <h3>점수입력</h3>
+            <div>
+                <label for="score-student">학생</label>
+                <select id="score-student" class="student" name="studentId" onchange="getSubjectsByStudent()"></select>
+                <label for="score-subject">수강중인과목</label>
+                <select id="score-subject" class="subjectByStudent" name="subjectId"></select>
+                <label for="point">점수</label>
+                <input id="point" type="text">
+                <button onclick="onclick_saveScoreButton()">등록</button>
+                <div>(학생 선택할 때 마다 해당 학생이 수강 중인 과목을 출력)</div>
+                <div>(점수 등록된 과목 등록 불가)</div>
+            </div>
+        </div>
+        <div>
+            <h3>학점조회</h3>
+            <label for="grade-subject">과목</label>
+            <select id="grade-subject" class="subject"></select>
+            <button onclick="onclick_findGradeButton()">조회</button>
+            <table border="1">
+                <thead>
+                <tr>
+                    <th>이름</th>
+                    <th>학번</th>
+                    <th>필수과목</th>
+                    <th>과목</th>
+                    <th>점수</th>
+                    <th>학점</th>
+                </tr>
+                </thead>
+                <tbody>
+
+                </tbody>
+            </table>
+        </div>
+
+    </body>
+</html>
